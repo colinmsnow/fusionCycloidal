@@ -439,7 +439,7 @@ class Cycloidal:
         if numHoles != 0:
             pinHoleSketch = sketches.add(root.xYConstructionPlane)
             sketchCircles = pinHoleSketch.sketchCurves.sketchCircles
-            centerPoint = adsk.core.Point3D.create(E + holeCircleDiameter/2, 0, 0)
+            centerPoint = adsk.core.Point3D.create(E, holeCircleDiameter/2, 0)
             sketchCircles.addByCenterRadius(centerPoint, holePinDiameter + E)
 
             pinHoleProfile = pinHoleSketch.profiles.item(0)
