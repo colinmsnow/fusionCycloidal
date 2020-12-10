@@ -1,4 +1,3 @@
-#Author-Autodesk Inc.
 #Description-Create cycloidal
 
 import adsk.core, adsk.fusion, traceback
@@ -11,6 +10,9 @@ defaultR = 5
 defaultN = 10
 defaultBore = 1
 defaultNumGears = 1
+defaultNumHoles = 0
+defaultHolePinDiameter = .25
+defaultHoleCircleDiameter = 3
 
 # global set of event handlers to keep them referenced for the duration of the command
 handlers = []
@@ -54,6 +56,12 @@ class CommandExecuteHandler(adsk.core.CommandEventHandler):
                     cycloidal.bore = unitsMgr.evaluateExpression(input.expression, "mm")
                 elif input.id == 'numGears':
                     cycloidal.numGears = unitsMgr.evaluateExpression(input.expression, "")
+                elif input.id == 'numHoles':
+                    cycloidal.numHoles = unitsMgr.evaluateExpression(input.expression, "")
+                elif input.id == 'holePinDiameter':
+                    cycloidal.holePinDiameter = unitsMgr.evaluateExpression(input.expression, "mm")
+                elif input.id == 'holeCircleDiameter':
+                    cycloidal.holeCircleDiameter = unitsMgr.evaluateExpression(input.expression, "mm")
                 # elif input.id == 'cutAngle':
                 #     bolt.cutAngle = unitsMgr.evaluateExpression(input.expression, "deg") 
                 # elif input.id == 'chamferDistance':
@@ -120,16 +128,17 @@ class CommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             initNumGears = adsk.core.ValueInput.createByReal(defaultNumGears)
             inputs.addValueInput('numGears', 'Number of gears', '', initNumGears)
 
-            #to do the thread length
+            # initNumGears = adsk.core.ValueInput.createByReal(defaultNumGears)
+            # inputs.addValueInput('numGears', 'Number of gears', '', initNumGears)
 
-            # initCutAngle = adsk.core.ValueInput.createByReal(defaultCutAngle)
-            # inputs.addValueInput('cutAngle', 'Cut Angle', 'deg', initCutAngle)
+            initNumHoles = adsk.core.ValueInput.createByReal(defaultNumHoles)
+            inputs.addValueInput('numHoles', 'Number of drive holes', '', initNumHoles)
 
-            # initChamferDistance = adsk.core.ValueInput.createByReal(defaultChamferDistance)
-            # inputs.addValueInput('chamferDistance', 'Chamfer Distance', 'cm', initChamferDistance)
+            initHolePinDiameter = adsk.core.ValueInput.createByReal(defaultHolePinDiameter)
+            inputs.addValueInput('holePinDiameter', 'Diameter of drive pins', 'mm', initHolePinDiameter)
 
-            # initFilletRadius = adsk.core.ValueInput.createByReal(defaultFilletRadius)
-            # inputs.addValueInput('filletRadius', 'Fillet Radius', 'cm', initFilletRadius)
+            initHoleCircleDiameter = adsk.core.ValueInput.createByReal(defaultHoleCircleDiameter)
+            inputs.addValueInput('holeCircleDiameter', 'Diameter of drive pin circle', 'mm', initHoleCircleDiameter)
         except:
             if ui:
                 ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
@@ -143,6 +152,9 @@ class Cycloidal:
         self.N_ = defaultN
         self.bore_ = defaultBore
         self.numGears_ = defaultNumGears
+        self.numHoles_ = defaultNumHoles
+        self.holePinDiameter_ = defaultHolePinDiameter
+        self.holeCircleDiameter_ = defaultHoleCircleDiameter
 
     #properties
     @property
@@ -194,6 +206,28 @@ class Cycloidal:
     def numGears(self, value):
         self.numGears_ = value  
 
+    @property
+    def numHoles(self):
+        return self.numHoles_
+    @numHoles.setter
+    def numHoles(self, value):
+        self.numHoles_ = value  
+
+    @property
+    def holePinDiameter(self):
+        return self.holePinDiameter_
+    @holePinDiameter.setter
+    def holePinDiameter(self, value):
+        self.holePinDiameter_ = value  
+
+    @property
+    def holeCircleDiameter(self):
+        return self.holeCircleDiameter_
+    @holeCircleDiameter.setter
+    def holeCircleDiameter(self, value):
+        self.holeCircleDiameter_ = value  
+
+
 
     def build(self):
         global newComp
@@ -209,6 +243,9 @@ class Cycloidal:
         N = self.N_
         bore = self.bore_
         numGears = self.numGears_
+        numHoles = self.numHoles_
+        holePinDiameter = self.holePinDiameter_
+        holeCircleDiameter = self.holeCircleDiameter_
 
         unitsMgr = app.activeProduct.unitsManager
 
@@ -397,6 +434,40 @@ class Cycloidal:
         distance = adsk.core.ValueInput.createByReal(rotorThickness)
         centerExtrudes = housing.features.extrudeFeatures.addSimple(centerHoleProfile, distance, adsk.fusion.FeatureOperations.CutFeatureOperation)
 
+        #Create holes for pins
+
+        if numHoles != 0:
+            pinHoleSketch = sketches.add(root.xYConstructionPlane)
+            sketchCircles = pinHoleSketch.sketchCurves.sketchCircles
+            centerPoint = adsk.core.Point3D.create(E + holeCircleDiameter/2, 0, 0)
+            sketchCircles.addByCenterRadius(centerPoint, holePinDiameter + E)
+
+            pinHoleProfile = pinHoleSketch.profiles.item(0)
+
+            distance = adsk.core.ValueInput.createByReal(rotorThickness)
+            pinExtrudes = housing.features.extrudeFeatures.addSimple(pinHoleProfile, distance, adsk.fusion.FeatureOperations.CutFeatureOperation)
+
+            inputEntites = adsk.core.ObjectCollection.create()
+            inputEntites.add(pinExtrudes)
+
+            # Get Z axis for circular pattern
+            zAxis = rotor.zConstructionAxis
+
+            # Create the input for circular pattern
+            circularFeats = rotor.features.circularPatternFeatures
+            circularFeatInput = circularFeats.createInput(inputEntites, zAxis)
+
+            # Set the quantity of the elements
+            circularFeatInput.quantity = adsk.core.ValueInput.createByReal(numHoles)
+
+            # Set the angle of the circular pattern
+            circularFeatInput.totalAngle = adsk.core.ValueInput.createByString('360 deg')
+
+            # Set symmetry of the circular pattern
+            circularFeatInput.isSymmetric = True
+
+            # Create the circular pattern
+            circularFeat = circularFeats.add(circularFeatInput)
         """ -----------------------Create multiple gears-----------------------"""
 
         body = body1
@@ -432,7 +503,7 @@ class Cycloidal:
             moveInput = root.features.moveFeatures.createInput(bodyColl, trans)
             moveFeat = root.features.moveFeatures.add(moveInput)
             
-            if (i%2 == 1):
+            if (i%2 == 0):
                 rotation = adsk.core.Matrix3D.create()
                 rotation.setToRotation(unitsMgr.convert(180, "deg", "rad"), root.yConstructionAxis.geometry.getData()[2], adsk.core.Point3D.create(0, 0, currentZ + rotorThickness/2))
                 moveInput2 = root.features.moveFeatures.createInput(bodyColl, rotation)
