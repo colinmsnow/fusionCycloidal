@@ -31,37 +31,39 @@ def createNewComponent():
     newOcc = allOccs.addNewComponent(adsk.core.Matrix3D.create())
     return newOcc.component
 
+
 class CommandExecuteHandler(adsk.core.CommandEventHandler):
     def __init__(self):
         super().__init__()
+
     def notify(self, args):
         try:
             unitsMgr = app.activeProduct.unitsManager
             command = args.firingEvent.sender
             inputs = command.commandInputs
 
-            cycloidal = Cycloidal()
+            self.objectClass = Cycloidal()
             for input in inputs:
                 if input.id == 'name':
-                    cycloidal.name = input.value
+                    self.objectClass.name = input.value
                 elif input.id == 'rotorThickness':
-                    cycloidal.rotorThickness = unitsMgr.evaluateExpression(input.expression, "mm")
+                    self.objectClass.rotorThickness = unitsMgr.evaluateExpression(input.expression, "mm")
                 elif input.id == 'housingThickness':
-                    cycloidal.housingThickness = unitsMgr.evaluateExpression(input.expression, "mm")
+                    self.objectClass.housingThickness = unitsMgr.evaluateExpression(input.expression, "mm")
                 elif input.id == 'R':
-                    cycloidal.R = unitsMgr.evaluateExpression(input.expression, "mm")
+                    self.objectClass.R = unitsMgr.evaluateExpression(input.expression, "mm")
                 elif input.id == 'N':
-                    cycloidal.N = unitsMgr.evaluateExpression(input.expression, "")
+                    self.objectClass.N = unitsMgr.evaluateExpression(input.expression, "")
                 elif input.id == 'bore':
-                    cycloidal.bore = unitsMgr.evaluateExpression(input.expression, "mm")
+                    self.objectClass.bore = unitsMgr.evaluateExpression(input.expression, "mm")
                 elif input.id == 'numGears':
-                    cycloidal.numGears = unitsMgr.evaluateExpression(input.expression, "")
+                    self.objectClass.numGears = unitsMgr.evaluateExpression(input.expression, "")
                 elif input.id == 'numHoles':
-                    cycloidal.numHoles = unitsMgr.evaluateExpression(input.expression, "")
+                    self.objectClass.numHoles = unitsMgr.evaluateExpression(input.expression, "")
                 elif input.id == 'holePinDiameter':
-                    cycloidal.holePinDiameter = unitsMgr.evaluateExpression(input.expression, "mm")
+                    self.objectClass.holePinDiameter = unitsMgr.evaluateExpression(input.expression, "mm")
                 elif input.id == 'holeCircleDiameter':
-                    cycloidal.holeCircleDiameter = unitsMgr.evaluateExpression(input.expression, "mm")
+                    self.objectClass.holeCircleDiameter = unitsMgr.evaluateExpression(input.expression, "mm")
                 # elif input.id == 'cutAngle':
                 #     bolt.cutAngle = unitsMgr.evaluateExpression(input.expression, "deg") 
                 # elif input.id == 'chamferDistance':
@@ -69,7 +71,7 @@ class CommandExecuteHandler(adsk.core.CommandEventHandler):
                 # elif input.id == 'filletRadius':
                 #     bolt.filletRadius = adsk.core.ValueInput.createByString(input.expression)
 
-            cycloidal.build()
+            self.objectClass.build()
             args.isValidResult = True
 
         except:
@@ -93,6 +95,7 @@ class CommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
         super().__init__()        
     def notify(self, args):
         try:
+            cycloidal = Cycloidal()
             cmd = args.command
             cmd.isRepeatable = False
             onExecute = CommandExecuteHandler()
@@ -128,9 +131,6 @@ class CommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             initNumGears = adsk.core.ValueInput.createByReal(defaultNumGears)
             inputs.addValueInput('numGears', 'Number of gears', '', initNumGears)
 
-            # initNumGears = adsk.core.ValueInput.createByReal(defaultNumGears)
-            # inputs.addValueInput('numGears', 'Number of gears', '', initNumGears)
-
             initNumHoles = adsk.core.ValueInput.createByReal(defaultNumHoles)
             inputs.addValueInput('numHoles', 'Number of drive holes', '', initNumHoles)
 
@@ -145,89 +145,16 @@ class CommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
 class Cycloidal:
     def __init__(self):
-        self.cycloidalname_ = defaultName
-        self.rotorThickness_ = defaultRotorThickness
-        self.housingThickness_ = defaultHousingThickness
-        self.R_ = defaultR
-        self.N_ = defaultN
-        self.bore_ = defaultBore
-        self.numGears_ = defaultNumGears
-        self.numHoles_ = defaultNumHoles
-        self.holePinDiameter_ = defaultHolePinDiameter
-        self.holeCircleDiameter_ = defaultHoleCircleDiameter
-
-    #properties
-    @property
-    def name(self):
-        return self.cycloidalname_
-    @name.setter
-    def name(self, value):
-        self.cycloidalname_ = value
-
-    @property
-    def rotorThickness(self):
-        return self.rotorThickness_
-    @rotorThickness.setter
-    def rotorThickness(self, value):
-        self.rotorThickness_ = value
-
-    @property
-    def housingThickness(self):
-        return self.housingThickness_
-    @housingThickness.setter
-    def housingThickness(self, value):
-        self.housingThickness_ = value 
-
-    @property
-    def R(self):
-        return self.R_
-    @R.setter
-    def R(self, value):
-        self.R_ = value 
-
-    @property
-    def N(self):
-        return self.N_
-    @N.setter
-    def N(self, value):
-        self.N_ = value   
-
-    @property
-    def bore(self):
-        return self.bore_
-    @bore.setter
-    def bore(self, value):
-        self.bore_ = value
-
-    @property
-    def numGears(self):
-        return self.numGears_
-    @numGears.setter
-    def numGears(self, value):
-        self.numGears_ = value  
-
-    @property
-    def numHoles(self):
-        return self.numHoles_
-    @numHoles.setter
-    def numHoles(self, value):
-        self.numHoles_ = value  
-
-    @property
-    def holePinDiameter(self):
-        return self.holePinDiameter_
-    @holePinDiameter.setter
-    def holePinDiameter(self, value):
-        self.holePinDiameter_ = value  
-
-    @property
-    def holeCircleDiameter(self):
-        return self.holeCircleDiameter_
-    @holeCircleDiameter.setter
-    def holeCircleDiameter(self, value):
-        self.holeCircleDiameter_ = value  
-
-
+        self.cycloidalname = defaultName
+        self.rotorThickness = defaultRotorThickness
+        self.housingThickness = defaultHousingThickness
+        self.R = defaultR
+        self.N = defaultN
+        self.bore = defaultBore
+        self.numGears = defaultNumGears
+        self.numHoles = defaultNumHoles
+        self.holePinDiameter = defaultHolePinDiameter
+        self.holeCircleDiameter = defaultHoleCircleDiameter
 
     def build(self):
         global newComp
@@ -237,15 +164,15 @@ class Cycloidal:
             return
 
 
-        rotorThickness = self.rotorThickness_
-        housingThickness = self.housingThickness_
-        R = self.R_
-        N = self.N_
-        bore = self.bore_
-        numGears = self.numGears_
-        numHoles = self.numHoles_
-        holePinDiameter = self.holePinDiameter_
-        holeCircleDiameter = self.holeCircleDiameter_
+        rotorThickness = self.rotorThickness
+        housingThickness = self.housingThickness
+        R = self.R
+        N = self.N
+        bore = self.bore
+        numGears = self.numGears
+        numHoles = self.numHoles
+        holePinDiameter = self.holePinDiameter
+        holeCircleDiameter = self.holeCircleDiameter
 
         unitsMgr = app.activeProduct.unitsManager
 
@@ -468,7 +395,8 @@ class Cycloidal:
 
             # Create the circular pattern
             circularFeat = circularFeats.add(circularFeatInput)
-        """ -----------------------Create multiple gears-----------------------"""
+
+        # Create multiple gears
 
         body = body1
         
@@ -509,9 +437,8 @@ class Cycloidal:
                 moveInput2 = root.features.moveFeatures.createInput(bodyColl, rotation)
                 moveFeat = root.features.moveFeatures.add(moveInput2)
 
-
-
         return
+
 
 def run(context):
     try:
@@ -527,7 +454,7 @@ def run(context):
             cmdDef = commandDefinitions.addButtonDefinition('Cycloidal',
                     'Create Cycloidal',
                     'Create a cycloidal.',
-                    '') # relative resource file path is specified
+                    '') # Edit last parameter to provide resources
 
         onCommandCreated = CommandCreatedHandler()
         cmdDef.commandCreated.add(onCommandCreated)
@@ -544,15 +471,9 @@ def run(context):
 
 
 def getPoint(t, R, Rr, E, N):
-    #psi = -math.atan(math.sin((1 - N) * theta) / ((R / (E * N)) - math.cos((1 - N) * theta)))
-    #x = R * math.cos(theta) - Rr * math.cos(theta - psi) - E * math.cos(N * theta)
-    #y =  - R * math.sin(theta) + Rr * math.sin(theta - psi) + E * math.cos(N * theta)
     psi = math.atan2(math.sin((1-N)*t), ((R/(E*N))-math.cos((1-N)*t)))
-
     x = (R*math.cos(t))-(Rr*math.cos(t+psi))-(E*math.cos(N*t))
     y = (-R*math.sin(t))+(Rr*math.sin(t+psi))+(E*math.sin(N*t))
-    #x = (10*math.cos(t))-(1.5*math.cos(t+math.atan(math.sin(-9*t)/((4/3)-math.cos(-9*t)))))-(0.75*math.cos(10*t))
-    #y = (-10*math.sin(t))+(1.5*math.sin(t+math.atan(math.sin(-9*t)/((4/3)-math.cos(-9*t)))))+(0.75*math.sin(10*t))
     return (x,y)
 
 def getDist(xa, ya, xb, yb):
