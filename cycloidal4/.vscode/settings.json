@@ -1,5 +1,5 @@
 {
 	"python.autoComplete.extraPaths":	["/Users/colinsnow1/Library/Application Support/Autodesk/Autodesk Fusion 360/API/Python/defs"],
-	"python.pythonPath":	"/Users/colinsnow1/Library/Application Support/Autodesk/webdeploy/production/f85e35eec2f8d20250b5e25e6865db05ebe6aa25/Autodesk Fusion 360.app/Contents/Frameworks/Python.framework/Versions/Current/bin/python",
+	"python.pythonPath":	"/Users/colinsnow1/Library/Application Support/Autodesk/webdeploy/production/5279b777792e8250576af6da9784c53f10a39cdc/Autodesk Fusion 360.app/Contents/Frameworks/Python.framework/Versions/Current/bin/python",
 	"python.linting.pylintEnabled":	false
 }

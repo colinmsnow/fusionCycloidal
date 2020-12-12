@@ -3,6 +3,81 @@
 import adsk.core, adsk.fusion, traceback
 import math
 
+from . import fusionUtils
+
+# from . import fusionUtils.CommandExecuteHandler
+
+CommandExecuteHandler = fusionUtils.CommandExecuteHandler
+CommandCommandDestroyHandler = fusionUtils.CommandDestroyHandler
+CommandCreatedHandler = fusionUtils.CommandCreatedHandler
+# class CommandExecuteHandler(adsk.core.CommandEventHandler):
+#     def __init__(self):
+#         super().__init__()
+
+#     def notify(self, args):
+#         try:
+#             unitsMgr = app.activeProduct.unitsManager
+#             command = args.firingEvent.sender
+#             inputs = command.commandInputs
+
+#             self.objectClass = CreatedObject()
+
+
+
+#             for input in inputs:
+#                 testParameter = parameters.parameterDict[input.id]
+#                 self.objectClass.parameters[input.id] = unitsMgr.evaluateExpression(input.expression, testParameter.units)
+
+#             self.objectClass.build()
+#             args.isValidResult = True
+
+#         except:
+#             if ui:
+#                 ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+
+# class CommandDestroyHandler(adsk.core.CommandEventHandler):
+#     def __init__(self):
+#         super().__init__()
+#     def notify(self, args):
+#         try:
+#             # when the command is done, terminate the script
+#             # this will release all globals which will remove all event handlers
+#             adsk.terminate()
+#         except:
+#             if ui:
+#                 ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+
+# class CommandCreatedHandler(adsk.core.CommandCreatedEventHandler):    
+#     def __init__(self):
+#         super().__init__()        
+#     def notify(self, args):
+#         try:
+#             cmd = args.command
+#             cmd.isRepeatable = False
+#             onExecute = CommandExecuteHandler()
+#             cmd.execute.add(onExecute)
+#             onExecutePreview = CommandExecuteHandler()
+#             cmd.executePreview.add(onExecutePreview)
+#             onDestroy = CommandDestroyHandler()
+#             cmd.destroy.add(onDestroy)
+#             # keep the handler referenced beyond this function
+#             handlers.append(onExecute)
+#             handlers.append(onExecutePreview)
+#             handlers.append(onDestroy)
+
+#             #define the inputs
+#             inputs = cmd.commandInputs
+#             # inputs.addStringValueInput('name', 'Name', defaultName)
+
+#             for parameter in parameters.parameterList:
+#                 initValue = adsk.core.ValueInput.createByReal(parameter.defaultValue)
+#                 inputs.addValueInput(parameter.id, parameter.description, parameter.units, initValue)
+
+#         except:
+#             if ui:
+#                 ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+
+
 defaultName = 'Cycloidal'
 defaultRotorThickness = .635
 defaultHousingThickness = 2 * defaultRotorThickness
@@ -13,7 +88,38 @@ defaultNumGears = 1
 defaultNumHoles = 0
 defaultHolePinDiameter = .25
 defaultHoleCircleDiameter = 3
-defaultEccentricityRatio = 1
+defaultEccentricityRatio = .5
+
+class Parameter:
+    def __init__(self, name, units, description, defaultValue):
+        self.id = name
+        self.units = units
+        self.description = description
+        self.defaultValue = defaultValue
+
+class Parameters:
+
+    def __init__(self):
+        self.parameterList = []
+        self.parameterDict = {}
+
+    def addParameter(self, name, units, description, defaultValue):
+        newParam = Parameter(name, units, description, defaultValue)
+        self.parameterList.append(newParam)
+        self.parameterDict[name] = newParam
+
+parameters = Parameters()
+parameters.addParameter('rotorThickness', "mm", 'Rotor Thickness', defaultRotorThickness)
+parameters.addParameter('housingThickness', "mm", 'Housing Thickness', defaultHousingThickness)
+parameters.addParameter('R', "mm", 'Radius', defaultR)
+parameters.addParameter('N', "", 'Number of pins', defaultN)
+parameters.addParameter('bore', "mm", 'Bore Diameter', defaultBore)
+parameters.addParameter('numGears', "", 'Number of gears', defaultNumGears)
+parameters.addParameter('numHoles', "", 'Number of drive holes', defaultNumHoles)
+parameters.addParameter('holePinDiameter', "mm", 'Diameter of drive pins', defaultHolePinDiameter)
+parameters.addParameter('holeCircleDiameter', "mm", 'Diameter of hole circle', defaultHoleCircleDiameter)
+parameters.addParameter('eccentricityRatio', "", 'Eccentricity Ratio', defaultEccentricityRatio)
+
 
 # global set of event handlers to keep them referenced for the duration of the command
 handlers = []
@@ -33,134 +139,11 @@ def createNewComponent():
     return newOcc.component
 
 
-class CommandExecuteHandler(adsk.core.CommandEventHandler):
+
+class CreatedObject:
+
     def __init__(self):
-        super().__init__()
-
-    def notify(self, args):
-        try:
-            unitsMgr = app.activeProduct.unitsManager
-            command = args.firingEvent.sender
-            inputs = command.commandInputs
-
-            self.objectClass = Cycloidal()
-            for input in inputs:
-                if input.id == 'name':
-                    self.objectClass.name = input.value
-                elif input.id == 'rotorThickness':
-                    self.objectClass.rotorThickness = unitsMgr.evaluateExpression(input.expression, "mm")
-                elif input.id == 'housingThickness':
-                    self.objectClass.housingThickness = unitsMgr.evaluateExpression(input.expression, "mm")
-                elif input.id == 'R':
-                    self.objectClass.R = unitsMgr.evaluateExpression(input.expression, "mm")
-                elif input.id == 'N':
-                    self.objectClass.N = unitsMgr.evaluateExpression(input.expression, "")
-                elif input.id == 'bore':
-                    self.objectClass.bore = unitsMgr.evaluateExpression(input.expression, "mm")
-                elif input.id == 'numGears':
-                    self.objectClass.numGears = unitsMgr.evaluateExpression(input.expression, "")
-                elif input.id == 'numHoles':
-                    self.objectClass.numHoles = unitsMgr.evaluateExpression(input.expression, "")
-                elif input.id == 'holePinDiameter':
-                    self.objectClass.holePinDiameter = unitsMgr.evaluateExpression(input.expression, "mm")
-                elif input.id == 'holeCircleDiameter':
-                    self.objectClass.holeCircleDiameter = unitsMgr.evaluateExpression(input.expression, "mm")
-                elif input.id == 'eccentricityRatio':
-                    self.objectClass.eccentricityRatio = unitsMgr.evaluateExpression(input.expression, "")
-                # elif input.id == 'cutAngle':
-                #     bolt.cutAngle = unitsMgr.evaluateExpression(input.expression, "deg") 
-                # elif input.id == 'chamferDistance':
-                #     bolt.chamferDistance = adsk.core.ValueInput.createByString(input.expression)
-                # elif input.id == 'filletRadius':
-                #     bolt.filletRadius = adsk.core.ValueInput.createByString(input.expression)
-
-            self.objectClass.build()
-            args.isValidResult = True
-
-        except:
-            if ui:
-                ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
-
-class CommandDestroyHandler(adsk.core.CommandEventHandler):
-    def __init__(self):
-        super().__init__()
-    def notify(self, args):
-        try:
-            # when the command is done, terminate the script
-            # this will release all globals which will remove all event handlers
-            adsk.terminate()
-        except:
-            if ui:
-                ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
-
-class CommandCreatedHandler(adsk.core.CommandCreatedEventHandler):    
-    def __init__(self):
-        super().__init__()        
-    def notify(self, args):
-        try:
-            cmd = args.command
-            cmd.isRepeatable = False
-            onExecute = CommandExecuteHandler()
-            cmd.execute.add(onExecute)
-            onExecutePreview = CommandExecuteHandler()
-            cmd.executePreview.add(onExecutePreview)
-            onDestroy = CommandDestroyHandler()
-            cmd.destroy.add(onDestroy)
-            # keep the handler referenced beyond this function
-            handlers.append(onExecute)
-            handlers.append(onExecutePreview)
-            handlers.append(onDestroy)
-
-            #define the inputs
-            inputs = cmd.commandInputs
-            inputs.addStringValueInput('name', 'Name', defaultName)
-
-            initRotorThickness = adsk.core.ValueInput.createByReal(defaultRotorThickness)
-            inputs.addValueInput('rotorThickness', 'Rotor Thickness','mm',initRotorThickness)
-
-            initHousingThickness = adsk.core.ValueInput.createByReal(defaultHousingThickness)
-            inputs.addValueInput('housingThickness', 'Housing Thickness', 'mm', initHousingThickness)
-
-            initR = adsk.core.ValueInput.createByReal(defaultR)
-            inputs.addValueInput('R', 'Radius', 'mm', initR)
-
-            initN = adsk.core.ValueInput.createByReal(defaultN)
-            inputs.addValueInput('N', 'Number', '', initN)
-
-            initBore = adsk.core.ValueInput.createByReal(defaultBore)
-            inputs.addValueInput('bore', 'Bore Diameter', 'mm', initBore)
-
-            initNumGears = adsk.core.ValueInput.createByReal(defaultNumGears)
-            inputs.addValueInput('numGears', 'Number of gears', '', initNumGears)
-
-            initNumHoles = adsk.core.ValueInput.createByReal(defaultNumHoles)
-            inputs.addValueInput('numHoles', 'Number of drive holes', '', initNumHoles)
-
-            initHolePinDiameter = adsk.core.ValueInput.createByReal(defaultHolePinDiameter)
-            inputs.addValueInput('holePinDiameter', 'Diameter of drive pins', 'mm', initHolePinDiameter)
-
-            initHoleCircleDiameter = adsk.core.ValueInput.createByReal(defaultHoleCircleDiameter)
-            inputs.addValueInput('holeCircleDiameter', 'Diameter of drive pin circle', 'mm', initHoleCircleDiameter)
-
-            initEccentricityRatio = adsk.core.ValueInput.createByReal(defaultEccentricityRatio)
-            inputs.addValueInput('eccentricityRatio', 'Eccentricity Ratio', '', initEccentricityRatio)
-        except:
-            if ui:
-                ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
-
-class Cycloidal:
-    def __init__(self):
-        self.cycloidalname = defaultName
-        self.rotorThickness = defaultRotorThickness
-        self.housingThickness = defaultHousingThickness
-        self.R = defaultR
-        self.N = defaultN
-        self.bore = defaultBore
-        self.numGears = defaultNumGears
-        self.numHoles = defaultNumHoles
-        self.holePinDiameter = defaultHolePinDiameter
-        self.holeCircleDiameter = defaultHoleCircleDiameter
-        self.eccentricityRatio = defaultEccentricityRatio
+        self.parameters = {}
 
     def build(self):
         global newComp
@@ -169,16 +152,16 @@ class Cycloidal:
             ui.messageBox('New component failed to create', 'New Component Failed')
             return
 
-        eccentricityRatio = self.eccentricityRatio
-        rotorThickness = self.rotorThickness
-        housingThickness = self.housingThickness
-        R = self.R
-        N = self.N
-        bore = self.bore
-        numGears = self.numGears
-        numHoles = self.numHoles
-        holePinDiameter = self.holePinDiameter
-        holeCircleDiameter = self.holeCircleDiameter
+        eccentricityRatio = self.parameters["eccentricityRatio"]
+        rotorThickness = self.parameters["rotorThickness"]
+        housingThickness = self.parameters["housingThickness"]
+        R = self.parameters["R"]
+        N = self.parameters["N"]
+        bore = self.parameters["bore"]
+        numGears = self.parameters["numGears"]
+        numHoles = self.parameters["numHoles"]
+        holePinDiameter = self.parameters["holePinDiameter"]
+        holeCircleDiameter = self.parameters["holeCircleDiameter"]
         
 
         unitsMgr = app.activeProduct.unitsManager
