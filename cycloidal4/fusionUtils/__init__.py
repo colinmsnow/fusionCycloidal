@@ -1,33 +1,29 @@
 import adsk.core, adsk.fusion, traceback
 import math
 
-handlers = []
-app = adsk.core.Application.get()
-if app:
-    ui = app.userInterface
-
-
-
 def nothing():
     pass
 
 
 class CommandExecuteHandler(adsk.core.CommandEventHandler):
-    def __init__(self):
+    def __init__(self, app, objectClass, inputParameters):
         super().__init__()
+        self.objectClass = objectClass
+        self.app = app
+        self.parameters = inputParameters
 
     def notify(self, args):
         try:
-            unitsMgr = app.activeProduct.unitsManager
+            unitsMgr = self.app.activeProduct.unitsManager
             command = args.firingEvent.sender
             inputs = command.commandInputs
 
-            self.objectClass = CreatedObject()
+            # self.objectClass = CreatedObject()
 
 
 
             for input in inputs:
-                testParameter = parameters.parameterDict[input.id]
+                testParameter = self.parameters.parameterDict[input.id]
                 self.objectClass.parameters[input.id] = unitsMgr.evaluateExpression(input.expression, testParameter.units)
 
             self.objectClass.build()
@@ -50,15 +46,19 @@ class CommandDestroyHandler(adsk.core.CommandEventHandler):
                 ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
 
 class CommandCreatedHandler(adsk.core.CommandCreatedEventHandler):    
-    def __init__(self):
-        super().__init__()        
+    def __init__(self, app, objectClass, inputParameters):
+        super().__init__()  
+        self.objectClass = objectClass
+        self.app = app    
+        self.parameters = inputParameters
+
     def notify(self, args):
         try:
             cmd = args.command
             cmd.isRepeatable = False
-            onExecute = CommandExecuteHandler()
+            onExecute = CommandExecuteHandler(self.app, self.objectClass, self.parameters)
             cmd.execute.add(onExecute)
-            onExecutePreview = CommandExecuteHandler()
+            onExecutePreview = CommandExecuteHandler(self.app, self.objectClass, self.parameters)
             cmd.executePreview.add(onExecutePreview)
             onDestroy = CommandDestroyHandler()
             cmd.destroy.add(onDestroy)
@@ -71,10 +71,11 @@ class CommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
             inputs = cmd.commandInputs
             # inputs.addStringValueInput('name', 'Name', defaultName)
 
-            for parameter in parameters.parameterList:
+            for parameter in self.parameters.parameterList:
                 initValue = adsk.core.ValueInput.createByReal(parameter.defaultValue)
                 inputs.addValueInput(parameter.id, parameter.description, parameter.units, initValue)
 
         except:
             if ui:
                 ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+
