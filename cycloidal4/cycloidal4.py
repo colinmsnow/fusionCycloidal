@@ -13,6 +13,7 @@ defaultNumGears = 1
 defaultNumHoles = 0
 defaultHolePinDiameter = .25
 defaultHoleCircleDiameter = 3
+defaultEccentricityRatio = 1
 
 # global set of event handlers to keep them referenced for the duration of the command
 handlers = []
@@ -64,6 +65,8 @@ class CommandExecuteHandler(adsk.core.CommandEventHandler):
                     self.objectClass.holePinDiameter = unitsMgr.evaluateExpression(input.expression, "mm")
                 elif input.id == 'holeCircleDiameter':
                     self.objectClass.holeCircleDiameter = unitsMgr.evaluateExpression(input.expression, "mm")
+                elif input.id == 'eccentricityRatio':
+                    self.objectClass.eccentricityRatio = unitsMgr.evaluateExpression(input.expression, "")
                 # elif input.id == 'cutAngle':
                 #     bolt.cutAngle = unitsMgr.evaluateExpression(input.expression, "deg") 
                 # elif input.id == 'chamferDistance':
@@ -95,7 +98,6 @@ class CommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
         super().__init__()        
     def notify(self, args):
         try:
-            cycloidal = Cycloidal()
             cmd = args.command
             cmd.isRepeatable = False
             onExecute = CommandExecuteHandler()
@@ -139,6 +141,9 @@ class CommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             initHoleCircleDiameter = adsk.core.ValueInput.createByReal(defaultHoleCircleDiameter)
             inputs.addValueInput('holeCircleDiameter', 'Diameter of drive pin circle', 'mm', initHoleCircleDiameter)
+
+            initEccentricityRatio = adsk.core.ValueInput.createByReal(defaultEccentricityRatio)
+            inputs.addValueInput('eccentricityRatio', 'Eccentricity Ratio', '', initEccentricityRatio)
         except:
             if ui:
                 ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
@@ -155,6 +160,7 @@ class Cycloidal:
         self.numHoles = defaultNumHoles
         self.holePinDiameter = defaultHolePinDiameter
         self.holeCircleDiameter = defaultHoleCircleDiameter
+        self.eccentricityRatio = defaultEccentricityRatio
 
     def build(self):
         global newComp
@@ -163,7 +169,7 @@ class Cycloidal:
             ui.messageBox('New component failed to create', 'New Component Failed')
             return
 
-
+        eccentricityRatio = self.eccentricityRatio
         rotorThickness = self.rotorThickness
         housingThickness = self.housingThickness
         R = self.R
@@ -173,15 +179,17 @@ class Cycloidal:
         numHoles = self.numHoles
         holePinDiameter = self.holePinDiameter
         holeCircleDiameter = self.holeCircleDiameter
+        
 
         unitsMgr = app.activeProduct.unitsManager
 
         #other constants based on the original inputs
         housing_cir = 2 * R * math.pi
-        Rr = housing_cir / (4 * N) #roller radius
-        E = 0.5 * Rr #eccentricity
+        Rr = housing_cir / (4 * N)#roller radius
+        E = eccentricityRatio * Rr#eccentricity
         maxDist = 0.25 * Rr #maximum allowed distance between points
         minDist = 0.5 * maxDist #the minimum allowed distance between points
+        
         
         product = app.activeProduct
         design = adsk.fusion.Design.cast(product)
@@ -320,7 +328,7 @@ class Cycloidal:
         rollerSketch = sketches.add(root.xYConstructionPlane)
         sketchCircles = rollerSketch.sketchCurves.sketchCircles
         centerPoint = adsk.core.Point3D.create(R, 0, 0)
-        sketchCircles.addByCenterRadius(centerPoint, Rr)
+        sketchCircles.addByCenterRadius(centerPoint, Rr )
 
         rollerProfile = rollerSketch.profiles.item(0)
         distance = adsk.core.ValueInput.createByReal(housingThickness)
@@ -361,13 +369,14 @@ class Cycloidal:
         distance = adsk.core.ValueInput.createByReal(rotorThickness)
         centerExtrudes = housing.features.extrudeFeatures.addSimple(centerHoleProfile, distance, adsk.fusion.FeatureOperations.CutFeatureOperation)
 
+
         #Create holes for pins
 
         if numHoles != 0:
             pinHoleSketch = sketches.add(root.xYConstructionPlane)
             sketchCircles = pinHoleSketch.sketchCurves.sketchCircles
             centerPoint = adsk.core.Point3D.create(E, holeCircleDiameter/2, 0)
-            sketchCircles.addByCenterRadius(centerPoint, holePinDiameter + E)
+            sketchCircles.addByCenterRadius(centerPoint, holePinDiameter/2 + E)
 
             pinHoleProfile = pinHoleSketch.profiles.item(0)
 
@@ -395,6 +404,7 @@ class Cycloidal:
 
             # Create the circular pattern
             circularFeat = circularFeats.add(circularFeatInput)
+
 
         # Create multiple gears
 
@@ -472,8 +482,8 @@ def run(context):
 
 def getPoint(t, R, Rr, E, N):
     psi = math.atan2(math.sin((1-N)*t), ((R/(E*N))-math.cos((1-N)*t)))
-    x = (R*math.cos(t))-(Rr*math.cos(t+psi))-(E*math.cos(N*t))
-    y = (-R*math.sin(t))+(Rr*math.sin(t+psi))+(E*math.sin(N*t))
+    x = (R*math.cos(t))    -(Rr*math.cos(t+psi))-(E*math.cos(N*t))
+    y = (-R*math.sin(t))   +(Rr*math.sin(t+psi))+(E*math.sin(N*t))
     return (x,y)
 
 def getDist(xa, ya, xb, yb):
