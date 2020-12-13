@@ -6,30 +6,33 @@ import traceback
 import math
 from . import fusionUtils
 
-CommandExecuteHandler = fusionUtils.CommandExecuteHandler
-CommandCreatedHandler = fusionUtils.CommandCreatedHandler
-CommandDestroyHandler = fusionUtils.CommandDestroyHandler
-
-DEFAULT_NAME = 'Cycloidal'
-
-parameters = fusionUtils.Parameters()
-parameters.addParameter('rotorThickness', "mm", 'Rotor Thickness', .635)
-parameters.addParameter('housingThickness', "mm", 'Housing Thickness', .635*2)
-parameters.addParameter('R', "mm", 'Radius', 5)
-parameters.addParameter('N', "", 'Number of pins', 10)
-parameters.addParameter('bore', "mm", 'Bore Diameter', 1)
-parameters.addParameter('numGears', "", 'Number of gears', 1)
-parameters.addParameter('numHoles', "", 'Number of drive holes', 0)
-parameters.addParameter('holePinDiameter', "mm", 'Diameter of drive pins', .25)
-parameters.addParameter('holeCircleDiameter', "mm", 'Diameter of hole circle', 3)
-parameters.addParameter('eccentricityRatio', "", 'Eccentricity Ratio', .5)
-
 
 def run(context):
     """ The function that is run by Fusion """
 
+    default_name = 'Cycloidal' # The name which appears in the top bar
+    parameters = fusionUtils.Parameters()
+
+    """Parameters to appear in the Fusion window
+        Parameters will apear in the order here with the following values:
+        name: the varuable name that will hold the valie
+        units: the units that the value will be converted to. "" for unitless
+        description: the text which will appear with the box
+        default_value: the initial value that will appear before being edited """
+
+    parameters.addParameter('rotorThickness', "mm", 'Rotor Thickness', .635)
+    parameters.addParameter('housingThickness', "mm", 'Housing Thickness', .635*2)
+    parameters.addParameter('R', "mm", 'Radius', 5)
+    parameters.addParameter('N', "", 'Number of pins', 10)
+    parameters.addParameter('bore', "mm", 'Bore Diameter', 1)
+    parameters.addParameter('numGears', "", 'Number of gears', 1)
+    parameters.addParameter('numHoles', "", 'Number of drive holes', 0)
+    parameters.addParameter('holePinDiameter', "mm", 'Diameter of drive pins', .25)
+    parameters.addParameter('holeCircleDiameter', "mm", 'Diameter of hole circle', 3)
+    parameters.addParameter('eccentricityRatio', "", 'Eccentricity Ratio', .5)
+
     createdObject = CreatedObject() # Create an instance of the designed class
-    fusionUtils.run(parameters, DEFAULT_NAME, createdObject)
+    fusionUtils.run(parameters, default_name, createdObject)
 
 
 class CreatedObject:
@@ -41,13 +44,9 @@ class CreatedObject:
     def build(self, app, ui):
         """ Perform the features to create the component """
 
-        self.app = app
-        self.ui = ui
-
-        app = self.app
         newComp = fusionUtils.createNewComponent(app)
         if newComp is None:
-            self.ui.messageBox('New component failed to create', 'New Component Failed')
+            ui.messageBox('New component failed to create', 'New Component Failed')
             return
 
         eccentricityRatio = self.parameters["eccentricityRatio"]

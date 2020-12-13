@@ -2,7 +2,9 @@
     The process is rather complicated and confusing so much of it has
     been relocated here to prevent confusion """
 
-import adsk.core, adsk.fusion, traceback
+import adsk.core
+import adsk.fusion
+import traceback
 import math
 
 class CommandExecuteHandler(adsk.core.CommandEventHandler):
