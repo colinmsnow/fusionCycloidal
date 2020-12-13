@@ -1,16 +1,13 @@
 import adsk.core, adsk.fusion, traceback
 import math
 
-def nothing():
-    pass
-
-
 class CommandExecuteHandler(adsk.core.CommandEventHandler):
-    def __init__(self, app, objectClass, inputParameters):
+    def __init__(self, app, ui, objectClass, inputParameters):
         super().__init__()
         self.objectClass = objectClass
         self.app = app
         self.parameters = inputParameters
+        self.ui = ui
 
     def notify(self, args):
         try:
@@ -30,42 +27,45 @@ class CommandExecuteHandler(adsk.core.CommandEventHandler):
             args.isValidResult = True
 
         except:
-            if ui:
-                ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+            if self.ui:
+                self.ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
 
 class CommandDestroyHandler(adsk.core.CommandEventHandler):
-    def __init__(self):
+    def __init__(self, ui):
         super().__init__()
+        self.ui = ui
     def notify(self, args):
         try:
             # when the command is done, terminate the script
             # this will release all globals which will remove all event handlers
             adsk.terminate()
         except:
-            if ui:
-                ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+            if self.ui:
+                self.ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
 
 class CommandCreatedHandler(adsk.core.CommandCreatedEventHandler):    
-    def __init__(self, app, objectClass, inputParameters):
+    def __init__(self, app, ui, objectClass, inputParameters, handlers):
         super().__init__()  
         self.objectClass = objectClass
         self.app = app    
         self.parameters = inputParameters
+        self.ui = ui
+        self.handlers = handlers
 
     def notify(self, args):
         try:
             cmd = args.command
             cmd.isRepeatable = False
-            onExecute = CommandExecuteHandler(self.app, self.objectClass, self.parameters)
+            onExecute = CommandExecuteHandler(self.app, self.ui,  self.objectClass, self.parameters)
             cmd.execute.add(onExecute)
-            onExecutePreview = CommandExecuteHandler(self.app, self.objectClass, self.parameters)
+            onExecutePreview = CommandExecuteHandler(self.app, self.ui, self.objectClass, self.parameters)
             cmd.executePreview.add(onExecutePreview)
-            onDestroy = CommandDestroyHandler()
+            onDestroy = CommandDestroyHandler(self.ui)
             cmd.destroy.add(onDestroy)
             # keep the handler referenced beyond this function
-            handlers.append(onExecute)
-            handlers.append(onExecutePreview)
-            handlers.append(onDestroy)
+            self.handlers.append(onExecute)
+            self.handlers.append(onExecutePreview)
+            self.handlers.append(onDestroy)
 
             #define the inputs
             inputs = cmd.commandInputs
@@ -76,6 +76,5 @@ class CommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
                 inputs.addValueInput(parameter.id, parameter.description, parameter.units, initValue)
 
         except:
-            if ui:
-                ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
-
+            if self.ui:
+                self.ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
