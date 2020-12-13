@@ -1,196 +1,85 @@
-#Description-Create cycloidal
+"""Create cycloidal gearbox"""
 
-import adsk.core, adsk.fusion, traceback
+import adsk.core
+import adsk.fusion
+import traceback
 import math
-
 from . import fusionUtils
-
-
-# to remove:
-
-# from . import fusionUtils.CommandExecuteHandler
-# from . import fusionUtils.CommandCreatedHandler
-# from . import fusionUtils.CommandDestroyHandler
 
 CommandExecuteHandler = fusionUtils.CommandExecuteHandler
 CommandCreatedHandler = fusionUtils.CommandCreatedHandler
 CommandDestroyHandler = fusionUtils.CommandDestroyHandler
 
+DEFAULT_NAME = 'Cycloidal'
 
-# class CommandExecuteHandler(adsk.core.CommandEventHandler):
-#     def __init__(self, app, ui, objectClass, inputParameters):
-#         super().__init__()
-#         self.objectClass = objectClass
-#         self.app = app
-#         self.parameters = inputParameters
-#         self.ui = ui
-
-#     def notify(self, args):
-#         try:
-#             unitsMgr = self.app.activeProduct.unitsManager
-#             command = args.firingEvent.sender
-#             inputs = command.commandInputs
-
-#             # self.objectClass = CreatedObject()
+parameters = fusionUtils.Parameters()
+parameters.addParameter('rotorThickness', "mm", 'Rotor Thickness', .635)
+parameters.addParameter('housingThickness', "mm", 'Housing Thickness', .635*2)
+parameters.addParameter('R', "mm", 'Radius', 5)
+parameters.addParameter('N', "", 'Number of pins', 10)
+parameters.addParameter('bore', "mm", 'Bore Diameter', 1)
+parameters.addParameter('numGears', "", 'Number of gears', 1)
+parameters.addParameter('numHoles', "", 'Number of drive holes', 0)
+parameters.addParameter('holePinDiameter', "mm", 'Diameter of drive pins', .25)
+parameters.addParameter('holeCircleDiameter', "mm", 'Diameter of hole circle', 3)
+parameters.addParameter('eccentricityRatio', "", 'Eccentricity Ratio', .5)
 
 
+def run(context):
+    """ The default function run by Fusion """
 
-#             for input in inputs:
-#                 testParameter = self.parameters.parameterDict[input.id]
-#                 self.objectClass.parameters[input.id] = unitsMgr.evaluateExpression(input.expression, testParameter.units)
+    handlers = []
+    app = adsk.core.Application.get()
+    if app:
+        ui = app.userInterface
 
-#             self.objectClass.build()
-#             args.isValidResult = True
+    try:
+        product = app.activeProduct
+        design = adsk.fusion.Design.cast(product)
+        if not design:
+            ui.messageBox('It is not supported in current workspace, please change to MODEL workspace and try again.')
+            return
+        commandDefinitions = ui.commandDefinitions
+        #check the command exists or not
+        cmdDef = commandDefinitions.itemById(DEFAULT_NAME)
+        if not cmdDef:
+            cmdDef = commandDefinitions.addButtonDefinition(DEFAULT_NAME,
+                    'Create ' + DEFAULT_NAME,
+                    'Create a' +  DEFAULT_NAME,
+                    '') # Edit last parameter to provide resources
 
-#         except:
-#             if self.ui:
-#                 self.ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+        createdObject = CreatedObject(app, ui)
 
-# class CommandDestroyHandler(adsk.core.CommandEventHandler):
-#     def __init__(self, ui):
-#         super().__init__()
-#         self.ui = ui
-#     def notify(self, args):
-#         try:
-#             # when the command is done, terminate the script
-#             # this will release all globals which will remove all event handlers
-#             adsk.terminate()
-#         except:
-#             if self.ui:
-#                 self.ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+        onCommandCreated = CommandCreatedHandler(app, ui, createdObject, parameters, handlers)
+        cmdDef.commandCreated.add(onCommandCreated)
+        # keep the handler referenced beyond this function
+        handlers.append(onCommandCreated)
+        inputs = adsk.core.NamedValues.create()
+        cmdDef.execute(inputs)
 
-# class CommandCreatedHandler(adsk.core.CommandCreatedEventHandler):    
-#     def __init__(self, app, ui, objectClass, inputParameters, handlers):
-#         super().__init__()  
-#         self.objectClass = objectClass
-#         self.app = app    
-#         self.parameters = inputParameters
-#         self.ui = ui
-#         self.handlers = handlers
-
-#     def notify(self, args):
-#         try:
-#             cmd = args.command
-#             cmd.isRepeatable = False
-#             onExecute = CommandExecuteHandler(self.app, self.ui,  self.objectClass, self.parameters)
-#             cmd.execute.add(onExecute)
-#             onExecutePreview = CommandExecuteHandler(self.app, self.ui, self.objectClass, self.parameters)
-#             cmd.executePreview.add(onExecutePreview)
-#             onDestroy = CommandDestroyHandler(self.ui)
-#             cmd.destroy.add(onDestroy)
-#             # keep the handler referenced beyond this function
-#             self.handlers.append(onExecute)
-#             self.handlers.append(onExecutePreview)
-#             self.handlers.append(onDestroy)
-
-#             #define the inputs
-#             inputs = cmd.commandInputs
-#             # inputs.addStringValueInput('name', 'Name', defaultName)
-
-#             for parameter in self.parameters.parameterList:
-#                 initValue = adsk.core.ValueInput.createByReal(parameter.defaultValue)
-#                 inputs.addValueInput(parameter.id, parameter.description, parameter.units, initValue)
-
-#         except:
-#             if self.ui:
-#                 self.ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-defaultName = 'Cycloidal'
-defaultRotorThickness = .635
-defaultHousingThickness = 2 * defaultRotorThickness
-defaultR = 5
-defaultN = 10
-defaultBore = 1
-defaultNumGears = 1
-defaultNumHoles = 0
-defaultHolePinDiameter = .25
-defaultHoleCircleDiameter = 3
-defaultEccentricityRatio = .5
-
-class Parameter:
-    def __init__(self, name, units, description, defaultValue):
-        self.id = name
-        self.units = units
-        self.description = description
-        self.defaultValue = defaultValue
-
-class Parameters:
-
-    def __init__(self):
-        self.parameterList = []
-        self.parameterDict = {}
-
-    def addParameter(self, name, units, description, defaultValue):
-        newParam = Parameter(name, units, description, defaultValue)
-        self.parameterList.append(newParam)
-        self.parameterDict[name] = newParam
-
-parameters = Parameters()
-parameters.addParameter('rotorThickness', "mm", 'Rotor Thickness', defaultRotorThickness)
-parameters.addParameter('housingThickness', "mm", 'Housing Thickness', defaultHousingThickness)
-parameters.addParameter('R', "mm", 'Radius', defaultR)
-parameters.addParameter('N', "", 'Number of pins', defaultN)
-parameters.addParameter('bore', "mm", 'Bore Diameter', defaultBore)
-parameters.addParameter('numGears', "", 'Number of gears', defaultNumGears)
-parameters.addParameter('numHoles', "", 'Number of drive holes', defaultNumHoles)
-parameters.addParameter('holePinDiameter', "mm", 'Diameter of drive pins', defaultHolePinDiameter)
-parameters.addParameter('holeCircleDiameter', "mm", 'Diameter of hole circle', defaultHoleCircleDiameter)
-parameters.addParameter('eccentricityRatio', "", 'Eccentricity Ratio', defaultEccentricityRatio)
-
-
-# global set of event handlers to keep them referenced for the duration of the command
-handlers = []
-app = adsk.core.Application.get()
-if app:
-    ui = app.userInterface
-
-newComp = None
-
-def createNewComponent():
-    # Get the active design.
-    product = app.activeProduct
-    design = adsk.fusion.Design.cast(product)
-    rootComp = design.rootComponent
-    allOccs = rootComp.occurrences
-    newOcc = allOccs.addNewComponent(adsk.core.Matrix3D.create())
-    return newOcc.component
-
+        # prevent this module from being terminate when the script returns, 
+        # because we are waiting for event handlers to fire
+        adsk.autoTerminate(False)
+    except:
+        if ui:
+            ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
 
 
 class CreatedObject:
+    """ The class which contains definitions to create the part """
 
-    def __init__(self):
+    def __init__(self, app, ui):
         self.parameters = {}
+        self.app = app
+        self.ui = ui
 
     def build(self):
-        global newComp
-        newComp = createNewComponent()
+        """ Perform the features to create the component """
+
+        app = self.app
+        newComp = fusionUtils.createNewComponent(app)
         if newComp is None:
-            ui.messageBox('New component failed to create', 'New Component Failed')
+            self.ui.messageBox('New component failed to create', 'New Component Failed')
             return
 
         eccentricityRatio = self.parameters["eccentricityRatio"]
@@ -203,8 +92,6 @@ class CreatedObject:
         numHoles = self.parameters["numHoles"]
         holePinDiameter = self.parameters["holePinDiameter"]
         holeCircleDiameter = self.parameters["holeCircleDiameter"]
-        
-
         unitsMgr = app.activeProduct.unitsManager
 
         #other constants based on the original inputs
@@ -474,43 +361,20 @@ class CreatedObject:
         return
 
 
-def run(context):
-    try:
-        product = app.activeProduct
-        design = adsk.fusion.Design.cast(product)
-        if not design:
-            ui.messageBox('It is not supported in current workspace, please change to MODEL workspace and try again.')
-            return
-        commandDefinitions = ui.commandDefinitions
-        #check the command exists or not
-        cmdDef = commandDefinitions.itemById('Cycloidal')
-        if not cmdDef:
-            cmdDef = commandDefinitions.addButtonDefinition('Cycloidal',
-                    'Create Cycloidal',
-                    'Create a cycloidal.',
-                    '') # Edit last parameter to provide resources
-
-        createdObject = CreatedObject()
-
-        onCommandCreated = CommandCreatedHandler(app, ui, createdObject, parameters, handlers)
-        cmdDef.commandCreated.add(onCommandCreated)
-        # keep the handler referenced beyond this function
-        handlers.append(onCommandCreated)
-        inputs = adsk.core.NamedValues.create()
-        cmdDef.execute(inputs)
-
-        # prevent this module from being terminate when the script returns, because we are waiting for event handlers to fire
-        adsk.autoTerminate(False)
-    except:
-        if ui:
-            ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
-
-
 def getPoint(t, R, Rr, E, N):
+    """ Get a point on a cycloid with the given parameters
+
+        t: parameter
+        R: major radius
+        Rr: rolling radius
+        E: eccentricity
+        N: number of pins """
     psi = math.atan2(math.sin((1-N)*t), ((R/(E*N))-math.cos((1-N)*t)))
-    x = (R*math.cos(t))    -(Rr*math.cos(t+psi))-(E*math.cos(N*t))
-    y = (-R*math.sin(t))   +(Rr*math.sin(t+psi))+(E*math.sin(N*t))
+    x = (R*math.cos(t))-(Rr*math.cos(t+psi))-(E*math.cos(N*t))
+    y = (-R*math.sin(t))+(Rr*math.sin(t+psi))+(E*math.sin(N*t))
     return (x,y)
 
+
 def getDist(xa, ya, xb, yb):
+    """ Get distance between two 2D points (xa,ya) and (xb,yb)"""
     return math.sqrt((xa-xb)**2 + (ya-yb)**2)

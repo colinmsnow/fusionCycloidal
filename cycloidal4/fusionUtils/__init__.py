@@ -15,10 +15,6 @@ class CommandExecuteHandler(adsk.core.CommandEventHandler):
             command = args.firingEvent.sender
             inputs = command.commandInputs
 
-            # self.objectClass = CreatedObject()
-
-
-
             for input in inputs:
                 testParameter = self.parameters.parameterDict[input.id]
                 self.objectClass.parameters[input.id] = unitsMgr.evaluateExpression(input.expression, testParameter.units)
@@ -29,6 +25,7 @@ class CommandExecuteHandler(adsk.core.CommandEventHandler):
         except:
             if self.ui:
                 self.ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+
 
 class CommandDestroyHandler(adsk.core.CommandEventHandler):
     def __init__(self, ui):
@@ -42,6 +39,7 @@ class CommandDestroyHandler(adsk.core.CommandEventHandler):
         except:
             if self.ui:
                 self.ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+
 
 class CommandCreatedHandler(adsk.core.CommandCreatedEventHandler):    
     def __init__(self, app, ui, objectClass, inputParameters, handlers):
@@ -69,7 +67,6 @@ class CommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
 
             #define the inputs
             inputs = cmd.commandInputs
-            # inputs.addStringValueInput('name', 'Name', defaultName)
 
             for parameter in self.parameters.parameterList:
                 initValue = adsk.core.ValueInput.createByReal(parameter.defaultValue)
@@ -78,3 +75,38 @@ class CommandCreatedHandler(adsk.core.CommandCreatedEventHandler):
         except:
             if self.ui:
                 self.ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+
+
+class Parameter:
+    """ A container for all parameters needed to create an input field """
+
+    def __init__(self, name, units, description, defaultValue):
+        self.id = name
+        self.units = units
+        self.description = description
+        self.defaultValue = defaultValue
+
+
+class Parameters:
+    """ A container to hold parameters for input initialization """
+
+    def __init__(self):
+        self.parameterList = []
+        self.parameterDict = {}
+
+    def addParameter(self, name, units, description, defaultValue):
+        newParam = Parameter(name, units, description, defaultValue)
+        self.parameterList.append(newParam)
+        self.parameterDict[name] = newParam
+
+
+def createNewComponent(app):
+    """ Create a new component in the active design """
+
+    # Get the active design.
+    product = app.activeProduct
+    design = adsk.fusion.Design.cast(product)
+    rootComp = design.rootComponent
+    allOccs = rootComp.occurrences
+    newOcc = allOccs.addNewComponent(adsk.core.Matrix3D.create())
+    return newOcc.component
