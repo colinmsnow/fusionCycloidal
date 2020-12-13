@@ -26,55 +26,23 @@ parameters.addParameter('eccentricityRatio', "", 'Eccentricity Ratio', .5)
 
 
 def run(context):
-    """ The default function run by Fusion """
+    """ The function that is run by Fusion """
 
-    handlers = []
-    app = adsk.core.Application.get()
-    if app:
-        ui = app.userInterface
-
-    try:
-        product = app.activeProduct
-        design = adsk.fusion.Design.cast(product)
-        if not design:
-            ui.messageBox('It is not supported in current workspace, please change to MODEL workspace and try again.')
-            return
-        commandDefinitions = ui.commandDefinitions
-        #check the command exists or not
-        cmdDef = commandDefinitions.itemById(DEFAULT_NAME)
-        if not cmdDef:
-            cmdDef = commandDefinitions.addButtonDefinition(DEFAULT_NAME,
-                    'Create ' + DEFAULT_NAME,
-                    'Create a' +  DEFAULT_NAME,
-                    '') # Edit last parameter to provide resources
-
-        createdObject = CreatedObject(app, ui)
-
-        onCommandCreated = CommandCreatedHandler(app, ui, createdObject, parameters, handlers)
-        cmdDef.commandCreated.add(onCommandCreated)
-        # keep the handler referenced beyond this function
-        handlers.append(onCommandCreated)
-        inputs = adsk.core.NamedValues.create()
-        cmdDef.execute(inputs)
-
-        # prevent this module from being terminate when the script returns, 
-        # because we are waiting for event handlers to fire
-        adsk.autoTerminate(False)
-    except:
-        if ui:
-            ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+    createdObject = CreatedObject() # Create an instance of the designed class
+    fusionUtils.run(parameters, DEFAULT_NAME, createdObject)
 
 
 class CreatedObject:
     """ The class which contains definitions to create the part """
 
-    def __init__(self, app, ui):
+    def __init__(self):
         self.parameters = {}
+
+    def build(self, app, ui):
+        """ Perform the features to create the component """
+
         self.app = app
         self.ui = ui
-
-    def build(self):
-        """ Perform the features to create the component """
 
         app = self.app
         newComp = fusionUtils.createNewComponent(app)
