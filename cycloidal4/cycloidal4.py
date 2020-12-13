@@ -31,8 +31,8 @@ def run(context):
     parameters.addParameter('holeCircleDiameter', "mm", 'Diameter of hole circle', 3)
     parameters.addParameter('eccentricityRatio', "", 'Eccentricity Ratio', .5)
 
-    createdObject = CreatedObject() # Create an instance of the designed class
-    fusionUtils.run(parameters, default_name, createdObject)
+    created_object = CreatedObject() # Create an instance of the designed class
+    fusionUtils.run(parameters, default_name, created_object)
 
 
 class CreatedObject:
@@ -49,6 +49,8 @@ class CreatedObject:
             ui.messageBox('New component failed to create', 'New Component Failed')
             return
 
+
+        # Copy parameters into local variables for ease of use
         eccentricityRatio = self.parameters["eccentricityRatio"]
         rotorThickness = self.parameters["rotorThickness"]
         housingThickness = self.parameters["housingThickness"]
@@ -59,7 +61,7 @@ class CreatedObject:
         numHoles = self.parameters["numHoles"]
         holePinDiameter = self.parameters["holePinDiameter"]
         holeCircleDiameter = self.parameters["holeCircleDiameter"]
-        unitsMgr = app.activeProduct.unitsManager
+        units_mgr = app.activeProduct.unitsManager
 
         #other constants based on the original inputs
         housing_cir = 2 * R * math.pi
@@ -211,6 +213,7 @@ class CreatedObject:
         rollerProfile = rollerSketch.profiles.item(0)
         distance = adsk.core.ValueInput.createByReal(housingThickness)
         rollerExtrudes = housing.features.extrudeFeatures.addSimple(rollerProfile, distance, adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+
         # Get the extrusion body
         roller = rollerExtrudes.bodies.item(0)
         roller.name = "roller"
@@ -321,11 +324,9 @@ class CreatedObject:
             
             if (i%2 == 0):
                 rotation = adsk.core.Matrix3D.create()
-                rotation.setToRotation(unitsMgr.convert(180, "deg", "rad"), root.yConstructionAxis.geometry.getData()[2], adsk.core.Point3D.create(0, 0, currentZ + rotorThickness/2))
+                rotation.setToRotation(units_mgr.convert(180, "deg", "rad"), root.yConstructionAxis.geometry.getData()[2], adsk.core.Point3D.create(0, 0, currentZ + rotorThickness/2))
                 moveInput2 = root.features.moveFeatures.createInput(bodyColl, rotation)
                 moveFeat = root.features.moveFeatures.add(moveInput2)
-
-        return
 
 
 def getPoint(t, R, Rr, E, N):

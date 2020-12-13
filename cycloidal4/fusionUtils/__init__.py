@@ -7,6 +7,7 @@ import adsk.fusion
 import traceback
 import math
 
+
 class CommandExecuteHandler(adsk.core.CommandEventHandler):
     """ Executes the reading of parameters and the building of the object """
     def __init__(self, app, ui, object_class, input_parameters):
